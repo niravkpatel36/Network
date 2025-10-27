@@ -1,0 +1,40 @@
+{% extends "network/layout.html" %}
+{% block body %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    {% if user.is_authenticated %}
+    <div class="card p-3 mb-4">
+      <div class="d-flex gap-3">
+        <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+        <div class="flex-grow-1">
+          <textarea id="post-content" class="form-control textarea-modern" rows="3" placeholder="What's happening?" maxlength="1000"></textarea>
+          <div class="d-flex justify-content-end mt-2">
+            <button id="submit-post" class="btn btn-primary">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">Log in to post, like, follow, and edit your posts.</div>
+    {% endif %}
+
+    {% include "network/posts_list.html" with page_obj=page_obj user_likes=user_likes %}
+  </div>
+</div>
+
+<script>
+document.getElementById('submit-post')?.addEventListener('click', () => {
+  const content = document.getElementById('post-content').value.trim();
+  if (!content) { alert('Post cannot be empty.'); return; }
+  fetch("{% url 'network:create_post' %}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": window.CSRF_TOKEN },
+    body: JSON.stringify({ content })
+  }).then(r => r.json()).then(data => {
+    if (data.error) { alert(data.error); return; }
+    // prepend created post (simple approach: reload first page)
+    window.location.href = "{% url 'network:all_posts' %}";
+  }).catch(e => alert('Network error.'));
+});
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "network/layout.html" %}
+{% block body %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    <div class="mb-3">
+      <h5>Posts from users you follow</h5>
+      <p class="muted small">Only signed-in users can view this page.</p>
+    </div>
+    {% include "network/posts_list.html" with page_obj=page_obj user_likes=user_likes %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+<div id="posts-list">
+  {% for post in page_obj %}
+  <div class="card post p-3 mb-3" data-post-id="{{ post.id }}">
+    <div class="d-flex gap-3">
+      <div class="avatar">{{ post.user.username|slice:":1"|upper }}</div>
+      <div class="w-100">
+        <div class="d-flex justify-content-between">
+          <div>
+            <a href="{% url 'network:profile' post.user.username %}" class="text-decoration-none"><strong>{{ post.user.username }}</strong></a>
+            <div class="muted small">{{ post.timestamp }}</div>
+          </div>
+          <div class="text-end">
+            <div class="small muted">{{ post.likes.count }} <i class="bi bi-heart-fill" style="color:#e11d48"></i></div>
+          </div>
+        </div>
+
+        <div class="post-content mt-2" id="content-{{ post.id }}">{{ post.content|linebreaks }}</div>
+
+        <div class="mt-3 d-flex gap-2 align-items-center">
+          {% if user.is_authenticated %}
+            <button class="btn btn-sm btn-outline-primary btn-like" data-post-id="{{ post.id }}">
+              {% if post.id in user_likes %}<i class="bi bi-heart-fill"></i> Unlike{% else %}<i class="bi bi-heart"></i> Like{% endif %}
+            </button>
+            {% if post.user == user %}
+              <button class="btn btn-sm btn-outline-secondary btn-edit" data-post-id="{{ post.id }}"><i class="bi bi-pencil"></i> Edit</button>
+            {% endif %}
+          {% else %}
+            <span class="muted">Log in to like or edit</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+    <div class="card p-4 text-center muted">No posts to show.</div>
+  {% endfor %}
+
+  <!-- Pagination -->
+  <nav aria-label="pages">
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+
+<script>
+document.addEventListener('click', function(e){
+  // Like/unlike
+  const likeBtn = e.target.closest('.btn-like');
+  if (likeBtn) {
+    const postId = likeBtn.dataset.postId;
+    fetch(`/post/${postId}/like`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': window.CSRF_TOKEN }
+    }).then(r => r.json()).then(data => {
+      if (data.error) { alert(data.error); return; }
+      const likesSpan = document.querySelector(`#posts-list .card[data-post-id="${postId}"] .small`);
+      // update button text
+      likeBtn.innerHTML = data.liked ? '<i class="bi bi-heart-fill"></i> Unlike' : '<i class="bi bi-heart"></i> Like';
+      // update top-right small likes count
+      const topSmall = document.querySelector(`#posts-list .card[data-post-id="${postId}"] .d-flex .small`);
+      if (topSmall) topSmall.innerText = data.likes + ' ';
+    });
+    return;
+  }
+
+  // Edit
+  const editBtn = e.target.closest('.btn-edit');
+  if (editBtn) {
+    const postId = editBtn.dataset.postId;
+    const contentDiv = document.getElementById(`content-${postId}`);
+    const originalText = contentDiv.innerText.trim();
+
+    contentDiv.innerHTML = `
+      <textarea id="edit-area-${postId}" class="form-control" rows="4">${originalText}</textarea>
+      <div class="mt-2 text-end">
+        <button id="save-${postId}" class="btn btn-sm btn-primary me-2">Save</button>
+        <button id="cancel-${postId}" class="btn btn-sm btn-outline-secondary">Cancel</button>
+      </div>
+    `;
+
+    document.getElementById(`save-${postId}`).addEventListener('click', () => {
+      const newContent = document.getElementById(`edit-area-${postId}`).value.trim();
+      if (!newContent) { alert('Content cannot be empty.'); return; }
+      fetch(`/post/${postId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.CSRF_TOKEN },
+        body: JSON.stringify({ content: newContent })
+      }).then(r => {
+        if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Unknown'); });
+        return r.json();
+      }).then(data => {
+        contentDiv.innerText = data.content;
+      }).catch(err => alert(err.message));
+    });
+
+    document.getElementById(`cancel-${postId}`).addEventListener('click', () => {
+      contentDiv.innerText = originalText;
+    });
+    return;
+  }
+});
+</script>

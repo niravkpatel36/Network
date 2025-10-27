@@ -1,0 +1,39 @@
+{% extends "network/layout.html" %}
+{% block body %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    <div class="card p-3 mb-4 d-flex align-items-center">
+      <div class="d-flex w-100 align-items-center justify-content-between gap-3">
+        <div class="d-flex gap-3 align-items-center">
+          <div class="avatar">{{ profile_user.username|slice:":1"|upper }}</div>
+          <div>
+            <h4 class="mb-0">{{ profile_user.username }}</h4>
+            <div class="muted small">{{ followers_count }} followers · {{ following_count }} following</div>
+          </div>
+        </div>
+        {% if user.is_authenticated and user != profile_user %}
+          <button id="follow-btn" class="btn btn-outline-primary">{% if is_following %}Unfollow{% else %}Follow{% endif %}</button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include "network/posts_list.html" with page_obj=page_obj user_likes=user_likes %}
+  </div>
+</div>
+
+<script>
+const followBtn = document.getElementById('follow-btn');
+if (followBtn) {
+  followBtn.addEventListener('click', () => {
+    fetch("{% url 'network:toggle_follow' profile_user.username %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': window.CSRF_TOKEN }
+    }).then(r => r.json()).then(data => {
+      if (data.error) { alert(data.error); return; }
+      document.getElementById('followers-count').innerText = data.followers_count;
+      followBtn.innerText = data.following ? 'Unfollow' : 'Follow';
+    });
+  });
+}
+</script>
+{% endblock %}
