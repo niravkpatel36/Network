@@ -83,7 +83,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Open browser at http://127.0.0.1:8000/
+The web application will be served at http://127.0.0.1:8000/
 
 ## Key Endpoints
 
